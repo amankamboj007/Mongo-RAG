@@ -1,0 +1,28 @@
+{
+  "name": "pdf_rag_citation",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node src/app.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "bcrpyt": "^2.0.0",
+    "canvas": "^3.2.0",
+    "dotenv": "^17.2.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongodb": "^7.0.0",
+    "multer": "^2.0.2",
+    "openai": "^6.15.0",
+    "pdf-parse": "^2.4.5",
+    "pdfjs-dist": "^5.4.449",
+    "sentence-splitter": "^5.0.0",
+    "uuid": "^13.0.0"
+  }
+}
