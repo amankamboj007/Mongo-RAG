@@ -1,6 +1,8 @@
 import bcrypt from 'bcrypt';
-import { development } from '../config/env';
+import { development } from '../config/env.js';
+
 
 export async function genratePassword (plainText){
-    return bcrypt.hash(plainText,development.salt)
+    let hash =  await bcrypt.hash(plainText,development.salt)
+    return hash
 }
