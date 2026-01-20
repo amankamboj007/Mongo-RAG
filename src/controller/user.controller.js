@@ -1,4 +1,4 @@
-import { adduser, verifyUser } from "../services/user.service.js";
+import { adduser, loginUser } from "../services/user.service.js";
 
 
 export async function addUsers(req, res) {
@@ -18,11 +18,11 @@ export async function addUsers(req, res) {
 
 export async function login(req, res) {
     try {
-        const user = await verifyUser(req)
+        const user = await loginUser(req)
 
         res.send({
-            message: "User fetched",
-            body: user
+            message: "User validated",
+            data: user
         }).status(200)
 
     } catch (error) {
