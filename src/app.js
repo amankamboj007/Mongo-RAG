@@ -17,7 +17,13 @@ app.use((req, res, next) => {
 
 app.use("/v1", intializeRoutes)
 
-
+app.use((err,req,res,next)=>{
+  console.log("Global error ",err)
+  res.status(err.statusCode || 401 ).json({
+    success:false,
+    message:err.message || "Internal server error"
+  })
+})
 
 
 
