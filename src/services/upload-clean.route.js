@@ -3,6 +3,7 @@ import { v4 as uuidv4 } from "uuid";
 import { embedText } from "../utils/embed.js";
 import { db } from "../config/db.js";
 import{split} from "sentence-splitter"
+import { ObjectId } from "mongodb";
 
 
 //using normal chunking -- old way
@@ -70,12 +71,13 @@ async function extractPdfText(buffer) {
   }
 }
 
-export async function ingestPdfBuffer(buffer) {
+export async function ingestPdfBuffer(buffer,metaData) {
   if (!buffer || buffer.length === 0) {
     throw new Error("Invalid or empty PDF buffer");
   }
 
   const col = db.collection("rag_chunks");
+  const docRecord = db.collection("user_docs")
   const docId = uuidv4();
 
   console.log(`Starting PDF ingestion for docId: ${docId}`);
@@ -125,6 +127,11 @@ export async function ingestPdfBuffer(buffer) {
 
     // Insert into database
     const result = await col.insertMany(docs);
+    await docRecord.insertOne({
+      userId: new ObjectId(metaData.userId),
+      docId: docId,
+      fileName:metaData.fileName
+    })
     console.log(`Inserted ${result.insertedCount} chunks into database`);
 
     return {

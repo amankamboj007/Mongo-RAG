@@ -19,8 +19,11 @@ export async function uploadFunction(req, res)  {
     }
 
     console.log(`Received PDF upload: ${req.file.originalname}, size: ${req.file.size} bytes`);
-
-    const out = await ingestPdfBuffer(req.file.buffer);
+    const metaData  = {
+      fileName : req.file.originalname,
+      userId : req.user._id
+    }
+    const out = await ingestPdfBuffer(req.file.buffer,metaData);
     
     res.json({
       ...out,
