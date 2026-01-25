@@ -118,3 +118,124 @@ export async function answerQuestion({ docId, question, topK = 6 }) {
   };
 }
 
+
+export async function answerQuestionMultiDocs({ docIds, question, topK = 6 }) {
+  const col = db.collection("rag_chunks");
+
+  if (!Array.isArray(docIds) || docIds.length === 0 || !question) {
+    return {
+      answer: "Missing docIds or question.",
+      error: "Missing required parameters"
+    };
+  }
+
+
+  const totalChunks = await col.countDocuments({
+    docId: { $in: docIds }
+  });
+
+
+  if (totalChunks === 0) {
+    return {
+      answer: "No chunks found for the provided documents.",
+      error: "No chunks found",
+      docIds
+    };
+  }
+
+
+  const qEmbedding = await embedText(question);
+
+  let results = [];
+
+  try {
+
+
+    results = await col.aggregate([
+      {
+        $vectorSearch: {
+          index: "default",
+          path: "embedding",
+          queryVector: qEmbedding,
+          numCandidates: Math.max(100, docIds.length * 80),
+          limit: topK,
+          filter: {
+            docId: { $in: docIds }
+          }
+        }
+      },
+      {
+        $project: {
+          text: 1,
+          chunkId: 1,
+          docId: 1,
+          score: { $meta: "vectorSearchScore" }
+        }
+      }
+    ]).toArray();
+  } catch (error) {
+    console.error("❌ Vector search failed:", error.message);
+    return {
+      answer: "Error retrieving information from documents.",
+      error: error.message,
+      docIds
+    };
+  }
+
+  if (!results.length) {
+    return {
+      answer: "No relevant context found in the selected documents.",
+      docIds
+    };
+  }
+
+
+  const groupedByDoc = results.reduce((acc, r) => {
+    acc[r.docId] = acc[r.docId] || [];
+    acc[r.docId].push(r);
+    return acc;
+  }, {});
+
+
+  const context = Object.entries(groupedByDoc)
+    .map(([docId, chunks]) => {
+      const text = chunks
+        .map(r => `[Chunk ${r.chunkId}]: ${r.text}`)
+        .join("\n");
+      return `[Document: ${docId}]\n${text}`;
+    })
+    .join("\n\n");
+
+
+  const completion = await client.chat.completions.create({
+    model: "gpt-4o-mini",
+    temperature: 0,
+    messages: [
+      {
+        role: "system",
+        content: `
+You are a professional assistant.
+Answer using ONLY the provided context.
+
+Rules:
+- Do NOT merge facts from different documents
+- If documents disagree, say you don't know
+- If the answer is not present, say you don't know
+- Maintain a professional tone and greeting
+        `
+      },
+      {
+        role: "user",
+        content: `Context:\n${context}\n\nQuestion:\n${question}`
+      }
+    ]
+  });
+
+  return {
+    answer: completion.choices[0].message.content,
+    docIds,
+    sources: Object.keys(groupedByDoc),
+    totalChunksConsidered: results.length,
+    searchMethod: "vector_search_multi_doc"
+  };
+}

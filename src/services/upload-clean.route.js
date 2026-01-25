@@ -2,8 +2,10 @@ import * as pdfjsLib from "pdfjs-dist/legacy/build/pdf.mjs";
 import { v4 as uuidv4 } from "uuid";
 import { embedText } from "../utils/embed.js";
 import { db } from "../config/db.js";
-import{split} from "sentence-splitter"
+import { split } from "sentence-splitter"
 import { ObjectId } from "mongodb";
+
+import { generateDocumentProfile } from "../utils/helper.js"
 
 
 //using normal chunking -- old way
@@ -71,7 +73,7 @@ async function extractPdfText(buffer) {
   }
 }
 
-export async function ingestPdfBuffer(buffer,metaData) {
+export async function ingestPdfBuffer(buffer, metaData) {
   if (!buffer || buffer.length === 0) {
     throw new Error("Invalid or empty PDF buffer");
   }
@@ -125,13 +127,19 @@ export async function ingestPdfBuffer(buffer,metaData) {
 
     console.log(`Generated ${docs.length} embeddings successfully`);
 
-    // Insert into database
     const result = await col.insertMany(docs);
+
+    const profile = await generateDocumentProfile(chunks);
+
     await docRecord.insertOne({
       userId: new ObjectId(metaData.userId),
-      docId: docId,
-      fileName:metaData.fileName
-    })
+      docId,
+      fileName: metaData.fileName,
+      docType: profile.docType,
+      summary: profile.summary,
+      keyTopics: profile.keyTopics,
+      createdAt: new Date()
+    });
     console.log(`Inserted ${result.insertedCount} chunks into database`);
 
     return {
